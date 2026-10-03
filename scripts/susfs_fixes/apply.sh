@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # 应用 SUSFS 补丁及各内核版本所需的上下文修复
-#
 # 依赖环境变量：
 #   ANDROID_VERSION KERNEL_VERSION KSU_VARIANT OS_PATCH_LEVEL SUB_LEVEL
 #   KERNEL_ROOT SUSFS4KSU KERNEL_PATCHES LEGACY_SUKISU_CONFIG
@@ -180,14 +179,6 @@ if [[ -f fs/statfs.c ]] && grep -qF 'susfs_sus_kstat_spoof_vfs_statfs(' fs/statf
     echo "前移 statfs.c 中 susfs_sus_kstat_spoof_vfs_statfs 的声明"
     sed -i '/^static int susfs_statfs_by_dentry(/i extern int susfs_sus_kstat_spoof_vfs_statfs(struct inode *inode, struct kstatfs *buf, bool *is_fuse);' fs/statfs.c
   fi
-fi
-
-# 上游 susfs.c 直接调用 security_sb_statfs 却没有包含 linux/security.h，
-# 5.15+ 靠其他头文件间接带入，5.10 没有这条路径，clang -Werror 报隐式声明；缺失时补上
-if [[ -f fs/susfs.c ]] && grep -qF 'security_sb_statfs(' fs/susfs.c \
-  && ! grep -qF '#include <linux/security.h>' fs/susfs.c; then
-  echo "为 susfs.c 补充 linux/security.h 头文件"
-  sed -i '0,/^#include <linux\/fs.h>$/s//#include <linux\/fs.h>\n#include <linux\/security.h>/' fs/susfs.c
 fi
 
 # 在编译前报告 SUSFS 主补丁产生的冲突文件，上游自带的 .rej 不计入
